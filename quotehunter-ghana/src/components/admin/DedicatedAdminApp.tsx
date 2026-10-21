@@ -41,6 +41,7 @@ interface DedicatedAdminAppProps {
 }
 
 const MASTER_PASSCODE = 'QH-GHANA-ADMIN-2026';
+const AUTHORIZED_SUPER_ADMIN_EMAIL = 'samuelboadiamin456@gmail.com';
 
 export const DedicatedAdminApp: React.FC<DedicatedAdminAppProps> = ({ onReturnToMarketplace }) => {
   const { user, refreshUser } = useAuth();
@@ -343,7 +344,7 @@ export const DedicatedAdminApp: React.FC<DedicatedAdminAppProps> = ({ onReturnTo
                   Recognized Super Administrator
                 </div>
                 <div className="text-slate-300">
-                  Authenticated as <strong className="text-white">{user.email}</strong>. Press below to enter executive mode.
+                  Authenticated as <strong className="text-white">{user?.email}</strong>. Press below to enter executive mode.
                 </div>
               </div>
               <button
