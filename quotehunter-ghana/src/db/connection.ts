@@ -13,7 +13,19 @@ import type { PoolConfig } from 'pg';
 const sslEnabled = process.env.DATABASE_SSL !== 'false';
 
 export function getConnectionUrl(admin = false): string | undefined {
-  return (admin && process.env.DATABASE_ADMIN_URL) || process.env.DATABASE_URL || undefined;
+  if (admin && process.env.DATABASE_ADMIN_URL) return process.env.DATABASE_ADMIN_URL;
+  const url = process.env.DATABASE_URL || undefined;
+  // Neon: schema changes should use the direct (non-pooled) endpoint. Derive it by dropping "-pooler".
+  if (admin && url) {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes('-pooler')) {
+        u.hostname = u.hostname.replace('-pooler', '');
+        return u.toString();
+      }
+    } catch { /* fall through */ }
+  }
+  return url;
 }
 
 export function getPoolConfig(admin = false): PoolConfig {
