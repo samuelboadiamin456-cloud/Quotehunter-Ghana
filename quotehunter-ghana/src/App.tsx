@@ -8,6 +8,7 @@ import { Header } from './components/common/Header.tsx';
 import { ContractorDashboard } from './components/contractor/ContractorDashboard.tsx';
 import { SupplierDashboard } from './components/supplier/SupplierDashboard.tsx';
 import { DedicatedAdminApp } from './components/admin/DedicatedAdminApp.tsx';
+import { LoginScreen } from './components/auth/LoginScreen.tsx';
 import { RfqListView } from './components/contractor/RfqListView.tsx';
 import { QuoteComparisonView } from './components/contractor/QuoteComparisonView.tsx';
 import { OrdersView } from './components/orders/OrdersView.tsx';
@@ -111,6 +112,11 @@ const MainApp: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // Not signed in: show the Google sign-in screen
+  if (!user) {
+    return <LoginScreen />;
   }
 
   return (

@@ -113,6 +113,8 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onNavigate, onOpenCr
                   </div>
                 </div>
 
+                {import.meta.env.DEV && (
+                <>
                 <div className="px-3 py-1 text-[11px] font-semibold text-slate-400">
                   Switch Active Persona
                 </div>
@@ -140,6 +142,9 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onNavigate, onOpenCr
                 </button>
 
 
+                </>
+                )}
+
                 <div className="border-t border-slate-100 mt-1 pt-1.5 pb-1">
                   <div className="px-3 py-1 text-[11px] font-semibold text-slate-400">
                     Governance & Legal
@@ -166,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onNavigate, onOpenCr
                     className="w-full text-left px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2"
                   >
                     <LogOut className="w-3.5 h-3.5" />
-                    Reset Session
+                    {import.meta.env.DEV ? 'Reset Session' : 'Sign out'}
                   </button>
                 </div>
               </div>
