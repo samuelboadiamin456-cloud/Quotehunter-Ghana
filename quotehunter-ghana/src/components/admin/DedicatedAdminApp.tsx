@@ -3,6 +3,7 @@ import { api } from '../../services/api.ts';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { SupplierProfile, Organization, AuditLogItem } from '../../types/index.ts';
 import { Building2, ArrowLeft, RefreshCw, Search, X } from 'lucide-react';
+import { AppBackdrop } from '../common/AppBackdrop.tsx';
 import { AdminBillingPanel } from '../billing/AdminBillingPanel.tsx';
 
 interface DedicatedAdminAppProps {
@@ -295,7 +296,8 @@ export const DedicatedAdminApp: React.FC<DedicatedAdminAppProps> = ({ onReturnTo
   // ---------------------------------------------------------------
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+      <div className="min-h-screen flex items-center justify-center px-4 py-12">
+        <AppBackdrop />
         <div className="w-full max-w-md bg-white border border-slate-200 rounded-lg shadow-2xs p-8 space-y-5">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white">
@@ -396,9 +398,10 @@ export const DedicatedAdminApp: React.FC<DedicatedAdminAppProps> = ({ onReturnTo
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen flex flex-col">
+      <AppBackdrop />
       {/* Header, same style as the main app */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-6 px-4 sm:px-6 py-3.5">
           <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
             <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shadow-xs">
@@ -473,7 +476,7 @@ export const DedicatedAdminApp: React.FC<DedicatedAdminAppProps> = ({ onReturnTo
         <div className="bg-rose-50 border-b border-rose-200 px-4 sm:px-6 py-2 text-sm text-rose-800">{loadError}</div>
       )}
 
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 space-y-6">
+      <main key={activeTab} className="qh-page flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 space-y-6">
         {/* ---------------- Overview ---------------- */}
         {activeTab === 'overview' && (
           <div className="space-y-6">

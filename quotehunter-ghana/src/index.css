@@ -38,3 +38,63 @@
     font-feature-settings: "tnum";
   }
 }
+
+/* ===== Site background ===== */
+body { background-color: #f1f5f9; }
+
+.qh-backdrop { position: fixed; inset: 0; z-index: -10; overflow: hidden; pointer-events: none; }
+.qh-backdrop-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  animation: qh-drift 50s ease-in-out infinite alternate;
+}
+.qh-backdrop-wash {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.86) 0%, rgba(248, 250, 252, 0.78) 45%, rgba(255, 247, 237, 0.84) 100%);
+}
+
+/* ===== Motion ===== */
+@keyframes qh-drift { from { transform: scale(1.02) translate3d(0, 0, 0); } to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); } }
+@keyframes qh-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes qh-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qh-pop { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes qh-drop { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: none; } }
+@keyframes qh-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes qh-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.35); } 50% { box-shadow: 0 0 0 10px rgba(217, 119, 6, 0); } }
+
+/* Header slides in once */
+header.sticky { animation: qh-drop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Page content rises in, one block after another. Re-runs when the tab changes (the keyed wrapper remounts). */
+.qh-page > * { animation: qh-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.qh-page > *:nth-child(2) { animation-delay: 60ms; }
+.qh-page > *:nth-child(3) { animation-delay: 120ms; }
+.qh-page > *:nth-child(4) { animation-delay: 180ms; }
+.qh-page > *:nth-child(5) { animation-delay: 240ms; }
+.qh-page > *:nth-child(n+6) { animation-delay: 300ms; }
+
+/* Cards in grids lift gently on hover */
+.qh-page .grid > .rounded-lg, .qh-page .grid > div.border { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.qh-page .grid > .rounded-lg:hover, .qh-page .grid > div.border:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.25); }
+
+/* Buttons respond to touch and hover */
+button:not(:disabled) { transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease; }
+button:not(:disabled):active { transform: scale(0.97); }
+
+/* Pop-ups fade in, their card pops */
+.fixed.inset-0 { animation: qh-fade 0.2s ease both; }
+.fixed.inset-0 > div { animation: qh-pop 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Table rows ease in */
+tbody tr { animation: qh-fade 0.4s ease both; }
+
+/* Scroll reveal helper */
+.qh-reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.qh-reveal-in { opacity: 1; transform: none; }
+
+.qh-float { animation: qh-float 4s ease-in-out infinite; }
+.qh-glow { animation: qh-glow 2.4s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .qh-reveal { opacity: 1; transform: none; }
+}

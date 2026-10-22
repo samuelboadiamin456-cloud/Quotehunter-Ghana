@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Building2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.tsx';
+import { AppBackdrop } from '../common/AppBackdrop.tsx';
 
 export const LoginScreen: React.FC = () => {
   const { signInWithGoogle, error } = useAuth();
@@ -16,9 +17,10 @@ export const LoginScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white border border-slate-200 rounded-xl shadow-sm p-8 text-center space-y-5">
-        <div className="w-12 h-12 rounded-xl bg-amber-600 flex items-center justify-center text-white mx-auto">
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <AppBackdrop />
+      <div className="qh-page w-full max-w-md bg-white/95 border border-slate-200 rounded-xl shadow-xl p-8 text-center space-y-5">
+        <div className="w-12 h-12 rounded-xl bg-amber-600 flex items-center justify-center text-white mx-auto qh-float qh-glow">
           <Building2 className="w-7 h-7" />
         </div>
         <div>

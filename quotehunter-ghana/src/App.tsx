@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { Header } from './components/common/Header.tsx';
+import { AppBackdrop } from './components/common/AppBackdrop.tsx';
 import { ContractorDashboard } from './components/contractor/ContractorDashboard.tsx';
 import { SupplierDashboard } from './components/supplier/SupplierDashboard.tsx';
 import { DedicatedAdminApp } from './components/admin/DedicatedAdminApp.tsx';
@@ -104,9 +105,10 @@ const MainApp: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center space-y-2">
-          <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white mx-auto animate-pulse">
+      <div className="min-h-screen flex items-center justify-center">
+        <AppBackdrop />
+        <div className="text-center space-y-2 bg-white/90 rounded-xl px-8 py-6 shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white mx-auto qh-glow">
             <Building2 className="w-5 h-5 text-white" />
           </div>
           <div className="text-sm font-semibold text-slate-800">QuoteHunter Ghana</div>
@@ -122,7 +124,8 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen flex flex-col">
+      <AppBackdrop />
       {/* Top Bar Contract (3 zones) */}
       <Header
         currentTab={currentTab}
@@ -143,10 +146,10 @@ const MainApp: React.FC = () => {
       <TrialBanner onOpenBilling={() => setCurrentTab('billing')} />
 
       {/* Main Content Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main key={currentTab} className="qh-page flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* Architectural Trust Hero Ribbon (shown on overview / dashboard) */}
         {currentTab === 'dashboard' && (
-          <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900 text-white shadow-2xs">
+          <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-900 text-white shadow-md">
             <div className="absolute inset-0 z-0 opacity-25">
               <img
                 src={heroImage}
@@ -284,7 +287,7 @@ const MainApp: React.FC = () => {
       />
 
       {/* Quiet Professional Footer */}
-      <footer className="bg-white border-t border-slate-200 mt-auto py-6">
+      <footer className="bg-white/90 backdrop-blur border-t border-slate-200 mt-auto py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-slate-800">QuoteHunter Ghana</span>
