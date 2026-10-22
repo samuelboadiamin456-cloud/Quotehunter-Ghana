@@ -279,7 +279,7 @@ apiRouter.post('/organizations', requireAuth, async (req: AuthRequest, res: Resp
         city: data.city,
         region: data.region,
         country: 'Ghana',
-        verificationStatus: data.type === 'supplier' ? 'pending' : 'verified',
+        verificationStatus: 'verified', // self-serve: no manual approval; admins can still suspend
       }).returning();
 
       // Link user as owner
@@ -295,7 +295,7 @@ apiRouter.post('/organizations', requireAuth, async (req: AuthRequest, res: Resp
         await tx.insert(supplierProfiles).values({
           id: 'sup_' + crypto.randomUUID().slice(0, 12),
           organizationId: orgId,
-          verificationStatus: 'pending',
+          verificationStatus: 'verified', // self-serve: no manual approval; admins can still suspend
           businessDescription: data.businessDescription || '',
           serviceRegions: JSON.stringify(data.serviceRegions || [data.region]),
           rating: '0.00',

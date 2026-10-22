@@ -91,7 +91,7 @@ export const requireAuth = async (
         city: null,
         region: 'Greater Accra',
         country: 'Ghana',
-        verificationStatus: 'pending', // Strictly pending, never fake-verified
+        verificationStatus: 'verified', // self-serve; email already verified by Google
       }).returning();
 
       await db.insert(organizationMembers).values({
