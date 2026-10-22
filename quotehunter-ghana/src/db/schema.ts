@@ -415,3 +415,39 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     references: [reviews.orderId],
   }),
 }));
+
+// ==========================================
+// BILLING
+// ==========================================
+
+// One row per organization: the end of the latest paid (or admin-granted) period.
+// Free-trial access is derived from organizations.created_at, so it needs no row.
+export const subscriptions = pgTable('subscriptions', {
+  organizationId: text('organization_id')
+    .references(() => organizations.id, { onDelete: 'cascade' })
+    .primaryKey(),
+  plan: text('plan').notNull(),
+  currentPeriodEnd: timestamp('current_period_end').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Every checkout attempt and every manual grant. Amounts are stored in pesewas (GHS x 100).
+export const payments = pgTable('payments', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id')
+    .references(() => organizations.id, { onDelete: 'cascade' })
+    .notNull(),
+  userId: text('user_id'),
+  plan: text('plan').notNull(),
+  provider: text('provider').notNull().default('paystack'), // 'paystack' | 'manual'
+  reference: text('reference').notNull().unique(),
+  amountPesewas: integer('amount_pesewas').notNull(),
+  currency: text('currency').notNull().default('GHS'),
+  status: text('status').notNull().default('pending'), // 'pending' | 'success' | 'failed'
+  periodDays: integer('period_days').notNull(),
+  invoiceNumber: text('invoice_number'),
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  paidAt: timestamp('paid_at'),
+});

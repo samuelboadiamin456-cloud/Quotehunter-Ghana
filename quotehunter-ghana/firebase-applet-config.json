@@ -1,11 +1,9 @@
 {
   "projectId": "quotehunter-ghana",
-  "appId": "1:156777691650:web:fca6b8ff31c917b385451b",
-  "apiKey": "AIzaSyDuP6xKkGrcZP3Byj6s2HZgPicd0Mb_5sM",
-  "authDomain": "abstract-patrol-23kqt.firebaseapp.com",
-  "storageBucket": "abstract-patrol-23kqt.firebasestorage.app",
-  "messagingSenderId": "156777691650",
-  "measurementId": "",
-  "oAuthClientId": "156777691650-s6i2oblh36t4ebujl175joaepu8qtrfr.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "appId": "1:127155198786:web:5aeb2138e85adb3ffb06db",
+  "apiKey": "AIzaSyDC6Np8RphvhgD0jBrkMXw-UmNw1P0gOgE",
+  "authDomain": "quotehunter-ghana.firebaseapp.com",
+  "storageBucket": "quotehunter-ghana.firebasestorage.app",
+  "messagingSenderId": "127155198786",
+  "measurementId": "G-CNL7WX4VCF"
 }

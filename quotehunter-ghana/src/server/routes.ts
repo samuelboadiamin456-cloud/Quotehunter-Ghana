@@ -69,6 +69,7 @@ import {
   generateSafeOrderNumber,
 } from './numbering.ts';
 import { runMigrations } from '../db/migrate.ts';
+import { requireBillingAccess } from './billing.ts';
 
 export const apiRouter = Router();
 
@@ -684,6 +685,8 @@ apiRouter.post('/rfqs', requireAuth, requireContractor, rfqLimiter, async (req: 
       return res.status(400).json({ error: 'Organization membership required to create an RFQ' });
     }
 
+    if (!(await requireBillingAccess(orgId, res))) return;
+
     const parseResult = createRfqSchema.safeParse(req.body);
     if (!parseResult.success) {
       return res.status(400).json({ error: parseResult.error.issues[0]?.message || 'Invalid RFQ input' });
@@ -859,6 +862,8 @@ apiRouter.post('/rfqs/:id/quotations', requireAuth, requireSupplier, quoteLimite
     if (!orgId) {
       return res.status(400).json({ error: 'Supplier organization membership required' });
     }
+
+    if (!(await requireBillingAccess(orgId, res))) return;
 
     const suppProfile = await db.select().from(supplierProfiles).where(eq(supplierProfiles.organizationId, orgId)).limit(1);
     if (!suppProfile.length) {

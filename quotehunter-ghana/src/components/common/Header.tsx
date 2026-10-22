@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.tsx';
-import { Building2, ChevronDown, Check, UserCircle, LogOut, Scale, Shield } from 'lucide-react';
+import { Building2, ChevronDown, Check, UserCircle, LogOut, Scale, Shield, CreditCard } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: string;
@@ -143,6 +143,18 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onNavigate, onOpenCr
 
 
                 </>
+                )}
+
+                {(user?.role === 'contractor' || user?.role === 'supplier') && (
+                  <div className="border-t border-slate-100 mt-1 pt-1.5 pb-1">
+                    <button
+                      onClick={() => { setDropdownOpen(false); onNavigate('billing'); }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+                      Billing and plans
+                    </button>
+                  </div>
                 )}
 
                 <div className="border-t border-slate-100 mt-1 pt-1.5 pb-1">

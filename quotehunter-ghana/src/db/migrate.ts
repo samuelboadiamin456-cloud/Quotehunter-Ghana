@@ -32,6 +32,37 @@ export async function runMigrations(): Promise<{ success: boolean; sequencesAlig
     await db.execute(sql`CREATE SEQUENCE IF NOT EXISTS quote_number_seq;`);
     await db.execute(sql`CREATE SEQUENCE IF NOT EXISTS order_number_seq;`);
 
+    // 1b. Billing tables + invoice number sequence (idempotent)
+    await db.execute(sql`CREATE SEQUENCE IF NOT EXISTS invoice_number_seq;`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        organization_id text PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+        plan text NOT NULL,
+        current_period_end timestamp NOT NULL,
+        created_at timestamp NOT NULL DEFAULT now(),
+        updated_at timestamp NOT NULL DEFAULT now()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS payments (
+        id text PRIMARY KEY,
+        organization_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        user_id text,
+        plan text NOT NULL,
+        provider text NOT NULL DEFAULT 'paystack',
+        reference text NOT NULL UNIQUE,
+        amount_pesewas integer NOT NULL,
+        currency text NOT NULL DEFAULT 'GHS',
+        status text NOT NULL DEFAULT 'pending',
+        period_days integer NOT NULL,
+        invoice_number text,
+        note text,
+        created_at timestamp NOT NULL DEFAULT now(),
+        paid_at timestamp
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS payments_org_idx ON payments (organization_id, created_at DESC);`);
+
     // 2. Adjust column nullability on organizations so new onboarding users do not require fake phone/address
     // Only alter columns that are still NOT NULL, so routine restarts never request a table lock.
     const notNull = await db.execute(sql`

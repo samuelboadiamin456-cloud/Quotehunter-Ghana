@@ -3,6 +3,7 @@ import { api } from '../../services/api.ts';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { SupplierProfile, Organization, AuditLogItem } from '../../types/index.ts';
 import { Building2, ArrowLeft, RefreshCw, Search, X } from 'lucide-react';
+import { AdminBillingPanel } from '../billing/AdminBillingPanel.tsx';
 
 interface DedicatedAdminAppProps {
   onReturnToMarketplace: () => void;
@@ -11,7 +12,7 @@ interface DedicatedAdminAppProps {
 const MASTER_PASSCODE = 'QH-GHANA-ADMIN-2026';
 const AUTHORIZED_SUPER_ADMIN_EMAIL = 'samuelboadiamin456@gmail.com';
 
-type TabId = 'overview' | 'users' | 'suppliers' | 'rfqs' | 'orders' | 'catalog' | 'audits' | 'system';
+type TabId = 'overview' | 'users' | 'suppliers' | 'rfqs' | 'orders' | 'catalog' | 'audits' | 'billing' | 'system';
 
 // "in_transit" -> "In transit", "super_admin" -> "Super admin"
 const label = (value?: string | null) => {
@@ -380,6 +381,7 @@ export const DedicatedAdminApp: React.FC<DedicatedAdminAppProps> = ({ onReturnTo
     { id: 'orders', name: 'Orders', count: orders.length },
     { id: 'catalog', name: 'Materials', count: catalog.materials?.length },
     { id: 'audits', name: 'Activity log', count: auditLogs.length },
+    { id: 'billing', name: 'Billing' },
     { id: 'system', name: 'System' },
   ];
 
@@ -961,6 +963,9 @@ export const DedicatedAdminApp: React.FC<DedicatedAdminAppProps> = ({ onReturnTo
             </div>
           </div>
         )}
+
+        {/* ---------------- Billing ---------------- */}
+        {activeTab === 'billing' && <AdminBillingPanel />}
 
         {/* ---------------- System ---------------- */}
         {activeTab === 'system' && (

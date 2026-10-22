@@ -16,6 +16,8 @@ import { SupplierDirectory } from './components/suppliers/SupplierDirectory.tsx'
 import { CreateRfqModal } from './components/contractor/CreateRfqModal.tsx';
 import { BoqImportModal } from './components/contractor/BoqImportModal.tsx';
 import { NewProjectModal } from './components/contractor/NewProjectModal.tsx';
+import { BillingView } from './components/billing/BillingView.tsx';
+import { TrialBanner } from './components/billing/TrialBanner.tsx';
 import { TermsAndConditions } from './components/legal/TermsAndConditions.tsx';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy.tsx';
 import { api } from './services/api.ts';
@@ -25,7 +27,7 @@ import { Building2, ShieldCheck, CheckCircle2, Shield } from 'lucide-react';
 
 const MainApp: React.FC = () => {
   const { user, currentOrg, loading } = useAuth();
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  const [currentTab, setCurrentTab] = useState<string>(() => (new URLSearchParams(window.location.search).get('billing') === 'return' ? 'billing' : 'dashboard'));
   const [activeRfqId, setActiveRfqId] = useState<string | null>(null);
 
   // Dedicated Admin App Mode toggle
@@ -138,6 +140,8 @@ const MainApp: React.FC = () => {
         onOpenCreateRfq={handleOpenCreateRfq}
       />
 
+      <TrialBanner onOpenBilling={() => setCurrentTab('billing')} />
+
       {/* Main Content Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* Architectural Trust Hero Ribbon (shown on overview / dashboard) */}
@@ -215,6 +219,8 @@ const MainApp: React.FC = () => {
         )}
 
         {currentTab === 'orders' && <OrdersView />}
+
+        {currentTab === 'billing' && <BillingView />}
 
         {currentTab === 'suppliers' && <SupplierDirectory />}
 
