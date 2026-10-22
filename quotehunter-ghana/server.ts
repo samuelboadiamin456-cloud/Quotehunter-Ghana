@@ -19,12 +19,11 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
-// Idempotent startup bootstrap (creates + aligns number sequences, grants them to the app user only).
-// Failures are logged loudly but never block the server from starting.
-runMigrations()
-  .catch((err) => console.error('[Server] Startup migration failed (sequences may be missing):', err?.message || err))
-  .finally(() => {
-    app.listen(port, () => {
-      console.log(`QuoteHunter Ghana production server listening on port ${port}`);
-    });
-  });
+// Bind the port first so the host sees the service as up, then run the idempotent bootstrap
+// (creates + aligns number sequences) in the background. Failures are logged, never fatal.
+app.listen(port, () => {
+  console.log(`QuoteHunter Ghana production server listening on port ${port}`);
+  runMigrations().catch((err) =>
+    console.error('[Server] Startup migration failed (sequences may be missing):', err?.message || err)
+  );
+});

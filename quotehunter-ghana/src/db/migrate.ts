@@ -33,12 +33,15 @@ export async function runMigrations(): Promise<{ success: boolean; sequencesAlig
     await db.execute(sql`CREATE SEQUENCE IF NOT EXISTS order_number_seq;`);
 
     // 2. Adjust column nullability on organizations so new onboarding users do not require fake phone/address
-    await db.execute(sql`
-      ALTER TABLE organizations ALTER COLUMN phone DROP NOT NULL;
-      ALTER TABLE organizations ALTER COLUMN address DROP NOT NULL;
-      ALTER TABLE organizations ALTER COLUMN city DROP NOT NULL;
-      ALTER TABLE organizations ALTER COLUMN region DROP NOT NULL;
+    // Only alter columns that are still NOT NULL, so routine restarts never request a table lock.
+    const notNull = await db.execute(sql`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'organizations'
+        AND column_name IN ('phone','address','city','region') AND is_nullable = 'NO';
     `);
+    for (const row of notNull.rows as Array<{ column_name: string }>) {
+      await db.execute(sql.raw(`ALTER TABLE organizations ALTER COLUMN "${row.column_name}" DROP NOT NULL;`));
+    }
 
     // 3. Grant sequence permissions strictly to the application database user (never to public)
     // Only the three procurement-number sequences, only to the app user, with a safely quoted identifier.
