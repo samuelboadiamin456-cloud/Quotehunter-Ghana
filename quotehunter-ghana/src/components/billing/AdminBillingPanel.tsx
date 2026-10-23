@@ -30,6 +30,16 @@ export const AdminBillingPanel: React.FC = () => {
     load();
   }, []);
 
+  const handleClaim = async (id: string, action: 'confirm' | 'reject') => {
+    setError(null);
+    try {
+      await billingApi.adminClaim(id, action);
+      await load();
+    } catch (err: any) {
+      setError(err.message || 'Could not update that payment');
+    }
+  };
+
   const submitGrant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!grantFor) return;
@@ -68,11 +78,54 @@ export const AdminBillingPanel: React.FC = () => {
       {data && (
         <>
           <div className="rounded-md border border-slate-200 bg-white text-sm px-4 py-3 text-slate-700">
-            Billing is <strong>{data.enforced ? 'switched on' : 'off (everything is free)'}</strong>. Online payments are{' '}
-            <strong>{data.paymentsEnabled ? 'ready' : 'not set up'}</strong>. Free trial is {data.trialDays} days. To change these, edit{' '}
-            <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">BILLING_ENFORCED</code> and{' '}
-            <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">PAYSTACK_SECRET_KEY</code> in Render.
+            Billing is <strong>{data.enforced ? 'switched on' : 'off (everything is free)'}</strong>. Mobile Money payments go to <strong>{data.momoNumber}</strong>. Online card/MoMo checkout is{' '}
+            <strong>{data.paymentsEnabled ? 'ready' : 'not set up'}</strong>. Free trial is {data.trialDays} days. To switch billing off, set{' '}
+            <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">BILLING_ENFORCED=false</code> in Render.
           </div>
+
+          {data.claims.length > 0 && (
+            <div className="bg-white border border-amber-300 rounded-lg overflow-hidden">
+              <div className="px-5 py-3 border-b border-amber-200 bg-amber-50 font-semibold text-amber-900">
+                Mobile Money payments waiting for you ({data.claims.length})
+              </div>
+              <p className="px-5 pt-3 text-sm text-slate-600">
+                Check your Mobile Money history on {data.momoNumber}. Confirm only when the transaction ID and amount match.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-slate-500 text-xs border-b border-slate-200">
+                    <tr>
+                      <th className="py-2.5 px-5 font-medium">Sent</th>
+                      <th className="py-2.5 px-5 font-medium">Account</th>
+                      <th className="py-2.5 px-5 font-medium">Plan</th>
+                      <th className="py-2.5 px-5 font-medium">Expected</th>
+                      <th className="py-2.5 px-5 font-medium">Transaction ID</th>
+                      <th className="py-2.5 px-5 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {data.claims.map((c) => (
+                      <tr key={c.id}>
+                        <td className="py-3 px-5 whitespace-nowrap">{fmtDate(c.createdAt)}</td>
+                        <td className="py-3 px-5">{c.organization}</td>
+                        <td className="py-3 px-5 whitespace-nowrap">{label(c.plan)}</td>
+                        <td className="py-3 px-5 whitespace-nowrap">{cedis(c.amountGhs)}</td>
+                        <td className="py-3 px-5 font-mono">{c.momoRef}</td>
+                        <td className="py-3 px-5 text-right whitespace-nowrap">
+                          <button onClick={() => handleClaim(c.id, 'reject')} className="mr-3 text-slate-600 hover:text-rose-700 font-medium">
+                            Reject
+                          </button>
+                          <button onClick={() => handleClaim(c.id, 'confirm')} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-md">
+                            Money received
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             {[
@@ -154,7 +207,7 @@ export const AdminBillingPanel: React.FC = () => {
                         <td className="py-3 px-5">{p.organization}</td>
                         <td className="py-3 px-5 whitespace-nowrap">{label(p.plan)}</td>
                         <td className="py-3 px-5 whitespace-nowrap">{cedis(p.amountGhs)}</td>
-                        <td className="py-3 px-5 whitespace-nowrap">{p.provider === 'paystack' ? 'Paystack' : 'Manual'}</td>
+                        <td className="py-3 px-5 whitespace-nowrap">{p.provider === 'paystack' ? 'Paystack' : p.provider === 'momo_manual' ? 'Mobile Money' : 'Added by admin'}</td>
                         <td className="py-3 px-5 text-right">
                           {p.invoiceNumber && (
                             <button

@@ -1,3 +1,4 @@
+import { AnimatedNumber } from '../common/AnimatedNumber.tsx';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { api } from '../../services/api.ts';
@@ -87,7 +88,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ onNavigate
         <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-2xs">
           <div className="text-xs font-medium text-slate-500">Available RFQs</div>
           <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums mt-1">
-            {rfqs.length}
+            <AnimatedNumber value={rfqs.length} />
           </div>
           <div className="text-[11px] text-slate-500 mt-1">Active requests to bid on</div>
         </div>
@@ -95,7 +96,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ onNavigate
         <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-2xs">
           <div className="text-xs font-medium text-slate-500">Total Orders Won</div>
           <div className="text-2xl font-bold text-amber-700 font-mono tabular-nums mt-1">
-            {orders.length}
+            <AnimatedNumber value={orders.length} />
           </div>
           <div className="text-[11px] text-slate-500 mt-1">Awarded quotations</div>
         </div>
@@ -103,7 +104,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ onNavigate
         <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-2xs">
           <div className="text-xs font-medium text-slate-500">Active Deliveries</div>
           <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums mt-1">
-            {activeDeliveries}
+            <AnimatedNumber value={activeDeliveries} />
           </div>
           <div className="text-[11px] text-slate-500 mt-1">Confirmed or in transit</div>
         </div>
@@ -111,7 +112,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ onNavigate
         <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-2xs">
           <div className="text-xs font-medium text-slate-500">Fulfilled Orders</div>
           <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums mt-1">
-            {completedOrders}
+            <AnimatedNumber value={completedOrders} />
           </div>
           <div className="text-[11px] text-slate-500 mt-1">Delivered successfully</div>
         </div>

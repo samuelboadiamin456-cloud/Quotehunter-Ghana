@@ -13,6 +13,9 @@ export const BillingView: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
+  const [momoPlan, setMomoPlan] = useState<string>('');
+  const [momoRef, setMomoRef] = useState('');
+  const [momoBusy, setMomoBusy] = useState(false);
 
   const load = async () => {
     try {
@@ -53,6 +56,24 @@ export const BillingView: React.FC = () => {
     } catch (e: any) {
       setError(e.message || 'Could not start the payment');
       setBusyPlan(null);
+    }
+  };
+
+  const submitMomo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    const planId = momoPlan || status?.plans[0]?.id || '';
+    setMomoBusy(true);
+    try {
+      await billingApi.momoClaim(planId, momoRef);
+      setMomoRef('');
+      setNotice('Thank you. We will confirm your payment shortly and your plan will start as soon as we do.');
+      await load();
+    } catch (err: any) {
+      setError(err.message || 'Could not submit your payment');
+    } finally {
+      setMomoBusy(false);
     }
   };
 
@@ -99,30 +120,77 @@ export const BillingView: React.FC = () => {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {status.plans.map((p) => (
-              <div key={p.id} className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col gap-3">
-                <div className="text-sm font-medium text-slate-500">{p.interval === 'monthly' ? 'Monthly' : 'Yearly'}</div>
-                <div className="text-3xl font-bold text-slate-900">
-                  {cedis(p.priceGhs)}
-                  <span className="text-sm font-medium text-slate-500"> / {p.interval === 'monthly' ? 'month' : 'year'}</span>
+            {status.plans.map((p) => {
+              const selected = (momoPlan || status.plans[0]?.id) === p.id;
+              return (
+                <div key={p.id} className={`bg-white border rounded-lg p-5 flex flex-col gap-3 ${selected ? 'border-amber-500 ring-1 ring-amber-500' : 'border-slate-200'}`}>
+                  <div className="text-sm font-medium text-slate-500">{p.interval === 'monthly' ? 'Monthly' : 'Yearly'}</div>
+                  <div className="text-3xl font-bold text-slate-900">
+                    {cedis(p.priceGhs)}
+                    <span className="text-sm font-medium text-slate-500"> / {p.interval === 'monthly' ? 'month' : 'year'}</span>
+                  </div>
+                  {p.interval === 'yearly' && (
+                    <div className="text-sm text-slate-500">Works out at {cedis(Math.round(p.priceGhs / 12))} a month.</div>
+                  )}
+                  <div className="mt-auto flex flex-col gap-2">
+                    <button
+                      onClick={() => setMomoPlan(p.id)}
+                      className={`whitespace-nowrap px-4 py-2.5 font-semibold text-sm rounded-md ${selected ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-800 hover:bg-slate-200'}`}
+                    >
+                      {selected ? 'Selected' : 'Choose this plan'}
+                    </button>
+                    {status.paymentsEnabled && (
+                      <button
+                        onClick={() => pay(p.id)}
+                        disabled={busyPlan !== null}
+                        className="whitespace-nowrap px-4 py-2.5 border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-800 font-semibold text-sm rounded-md"
+                      >
+                        {busyPlan === p.id ? 'Opening Paystack...' : 'Pay online with card or MoMo'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {p.interval === 'yearly' && (
-                  <div className="text-sm text-slate-500">Works out at {cedis(Math.round(p.priceGhs / 12))} a month.</div>
-                )}
-                <button
-                  onClick={() => pay(p.id)}
-                  disabled={!status.paymentsEnabled || busyPlan !== null}
-                  className="mt-auto whitespace-nowrap px-4 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold text-sm rounded-md transition-colors"
-                >
-                  {busyPlan === p.id ? 'Opening Paystack...' : 'Pay with Paystack'}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          {!status.paymentsEnabled && (
-            <p className="text-sm text-slate-500">Online payment is not switched on yet. Check back soon.</p>
-          )}
-          <p className="text-xs text-slate-500">Pay by Mobile Money or card. Payments are handled by Paystack, and we never see your card or Mobile Money PIN.</p>
+
+          {(() => {
+            const chosen = status.plans.find((p) => p.id === (momoPlan || status.plans[0]?.id));
+            return (
+              <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+                <div className="font-semibold text-slate-900">Pay by Mobile Money</div>
+                <ol className="list-decimal pl-5 space-y-1.5 text-sm text-slate-700">
+                  <li>
+                    Send <strong>{chosen ? cedis(chosen.priceGhs) : 'the plan amount'}</strong> to{' '}
+                    <strong className="text-base tracking-wide">{status.momo.number}</strong>
+                    {status.momo.name ? ` (${status.momo.name})` : ''} on MTN, Telecel or AirtelTigo.
+                  </li>
+                  <li>Copy the transaction ID from the confirmation message you receive.</li>
+                  <li>Enter it below and send it to us.</li>
+                </ol>
+                <form onSubmit={submitMomo} className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    value={momoRef}
+                    onChange={(e) => setMomoRef(e.target.value)}
+                    required
+                    minLength={4}
+                    maxLength={40}
+                    placeholder="Mobile Money transaction ID"
+                    className="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button disabled={momoBusy} className="whitespace-nowrap px-4 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold text-sm rounded-md">
+                    {momoBusy ? 'Sending...' : 'I have paid'}
+                  </button>
+                </form>
+                {status.pendingClaims.length > 0 && (
+                  <div className="text-sm text-slate-600 border-t border-slate-100 pt-3">
+                    Waiting for confirmation:{' '}
+                    {status.pendingClaims.map((c) => c.momoRef).join(', ')}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
 
@@ -223,7 +291,7 @@ export const InvoiceModal: React.FC<{ invoice: InvoiceData; onClose: () => void 
         </table>
 
         <div className="text-xs text-slate-500">
-          Payment reference: {invoice.reference} · Paid via {invoice.provider === 'paystack' ? 'Paystack' : 'manual payment'}
+          Payment reference: {invoice.reference} · Paid via {invoice.provider === 'paystack' ? 'Paystack' : invoice.provider === 'momo_manual' ? 'Mobile Money' : 'manual payment'}
         </div>
       </div>
       <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 print:hidden">

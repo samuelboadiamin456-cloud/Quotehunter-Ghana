@@ -3,6 +3,7 @@ import { api } from '../../services/api.ts';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { SupplierProfile, Organization, AuditLogItem } from '../../types/index.ts';
 import { Building2, ArrowLeft, RefreshCw, Search, X } from 'lucide-react';
+import { AnimatedNumber } from '../common/AnimatedNumber.tsx';
 import { AppBackdrop } from '../common/AppBackdrop.tsx';
 import { AdminBillingPanel } from '../billing/AdminBillingPanel.tsx';
 
@@ -493,7 +494,7 @@ export const DedicatedAdminApp: React.FC<DedicatedAdminAppProps> = ({ onReturnTo
               ].map((stat) => (
                 <div key={stat.name} className={`${card} p-4`}>
                   <div className="text-xs text-slate-500">{stat.name}</div>
-                  <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">{stat.value}</div>
+                  <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums"><AnimatedNumber value={stat.value} /></div>
                 </div>
               ))}
             </div>

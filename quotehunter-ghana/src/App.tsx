@@ -27,6 +27,25 @@ import heroImage from './assets/images/accra_construction_site_1792271318170.jpg
 import { Building2, ShieldCheck, CheckCircle2, Shield } from 'lucide-react';
 
 const MainApp: React.FC = () => {
+  // Click ripple on any button
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const btn = (e.target as HTMLElement | null)?.closest?.('button') as HTMLButtonElement | null;
+      if (!btn || btn.disabled) return;
+      const rect = btn.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const dot = document.createElement('span');
+      dot.className = 'qh-ripple';
+      dot.style.width = dot.style.height = `${size}px`;
+      dot.style.left = `${e.clientX - rect.left - size / 2}px`;
+      dot.style.top = `${e.clientY - rect.top - size / 2}px`;
+      btn.appendChild(dot);
+      setTimeout(() => dot.remove(), 650);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, []);
+
   const { user, currentOrg, loading } = useAuth();
   const [currentTab, setCurrentTab] = useState<string>(() => (new URLSearchParams(window.location.search).get('billing') === 'return' ? 'billing' : 'dashboard'));
   const [activeRfqId, setActiveRfqId] = useState<string | null>(null);

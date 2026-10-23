@@ -72,9 +72,9 @@ header.sticky { animation: qh-drop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .qh-page > *:nth-child(5) { animation-delay: 240ms; }
 .qh-page > *:nth-child(n+6) { animation-delay: 300ms; }
 
-/* Cards in grids lift gently on hover */
-.qh-page .grid > .rounded-lg, .qh-page .grid > div.border { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.qh-page .grid > .rounded-lg:hover, .qh-page .grid > div.border:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.25); }
+/* Cards lift gently on hover (not tables or forms) */
+.qh-page .bg-white.rounded-lg:not(:has(table, form, input, textarea, select)) { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.qh-page .bg-white.rounded-lg:not(:has(table, form, input, textarea, select)):hover { transform: translateY(-3px); box-shadow: 0 12px 26px -12px rgba(15, 23, 42, 0.3); }
 
 /* Buttons respond to touch and hover */
 button:not(:disabled) { transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease; }
@@ -94,7 +94,27 @@ tbody tr { animation: qh-fade 0.4s ease both; }
 .qh-float { animation: qh-float 4s ease-in-out infinite; }
 .qh-glow { animation: qh-glow 2.4s ease-out infinite; }
 
+/* If the device asks for reduced motion, keep the short entrance fades but stop the constant movement. */
+/* ===== Reactive (hover / click) motion ===== */
+.qh-page .bg-white.border.rounded-lg { transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease; }
+.qh-page .bg-white.border.rounded-lg:hover { transform: translateY(-3px); box-shadow: 0 14px 28px -14px rgba(15, 23, 42, 0.35); border-color: #fbbf24; }
+/* big tables and pop-up cards should not jump around */
+.qh-page .overflow-hidden.rounded-lg:hover, .fixed.inset-0 > div.bg-white:hover { transform: none; }
+
+button:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 8px 16px -8px rgba(15, 23, 42, 0.4); }
+button:not(:disabled):active { transform: translateY(0) scale(0.96); box-shadow: none; }
+header nav button:hover { color: #b45309; }
+tbody tr { transition: background-color 0.15s ease, transform 0.15s ease; }
+tbody tr:hover { background-color: rgba(251, 191, 36, 0.12); transform: translateX(3px); }
+a { transition: color 0.15s ease; }
+
+/* Click ripple (added by App) */
+button { position: relative; overflow: hidden; }
+.qh-ripple { position: absolute; border-radius: 9999px; background: rgba(255, 255, 255, 0.55); transform: scale(0); animation: qh-ripple 0.6s ease-out forwards; pointer-events: none; }
+@keyframes qh-ripple { to { transform: scale(4); opacity: 0; } }
+
+/* Reduce motion: keep short fades and hover feedback, stop only the big continuous movement */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-  .qh-reveal { opacity: 1; transform: none; }
+  .qh-backdrop-img, .qh-float, .qh-glow { animation: none !important; }
+  .qh-page > * { animation-duration: 0.25s !important; }
 }

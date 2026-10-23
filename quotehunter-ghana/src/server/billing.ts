@@ -12,12 +12,12 @@ import { logAuditEvent } from './audit.ts';
  * Billing for QuoteHunter Ghana.
  *
  * Model: every organisation gets a free trial (TRIAL_DAYS from sign-up), then needs a paid plan.
- * Suppliers pay slightly more than contractors. Nothing is enforced until BILLING_ENFORCED=true,
+ * Suppliers pay slightly more than contractors. Billing is ON by default (set BILLING_ENFORCED=false to turn it off),
  * so you can launch free and switch billing on later with one environment variable.
  *
  * Environment:
  *   PAYSTACK_SECRET_KEY   Paystack secret key (sk_test_... or sk_live_...). Server-side only.
- *   BILLING_ENFORCED      "true" to block bidding / RFQ creation once trial and paid time run out.
+ *   BILLING_ENFORCED      ON unless set to "false". When on, accounts with no trial or paid time left are blocked from bidding / RFQ creation once trial and paid time run out.
  *   TRIAL_DAYS            Free trial length in days (default 30).
  *   APP_URL               Public site address used for the Paystack return link.
  */
@@ -41,7 +41,11 @@ export const PLANS: Plan[] = [
   { id: 'supplier_yearly', orgType: 'supplier', name: 'Supplier Yearly', interval: 'yearly', priceGhs: 1200, days: 365 },
 ];
 
-const isEnforced = () => process.env.BILLING_ENFORCED === 'true';
+// Billing is ON by default. Set BILLING_ENFORCED=false in Render to switch it off (everything free).
+const isEnforced = () => process.env.BILLING_ENFORCED !== 'false';
+// Mobile Money number that customers pay directly. Override with MOMO_NUMBER / MOMO_NAME in Render.
+export const MOMO_NUMBER = process.env.MOMO_NUMBER || '0249428568';
+export const MOMO_NAME = process.env.MOMO_NAME || '';
 const paystackKey = () => process.env.PAYSTACK_SECRET_KEY || '';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -212,9 +216,14 @@ billingRouter.get('/status', requireAuth, async (req: AuthRequest, res: Response
     if (!orgId) return res.status(400).json({ error: 'Organization membership required' });
     const state = await getBillingState(orgId);
     if (!state) return res.status(404).json({ error: 'Organization not found' });
+    const claims = await db.select().from(payments)
+      .where(and(eq(payments.organizationId, orgId), eq(payments.provider, 'momo_manual'), eq(payments.status, 'pending')))
+      .orderBy(desc(payments.createdAt)).limit(10);
     res.json({
       ...state,
       paymentsEnabled: !!paystackKey(),
+      momo: { number: MOMO_NUMBER, name: MOMO_NAME },
+      pendingClaims: claims.map((c) => ({ id: c.id, plan: c.plan, momoRef: c.note, createdAt: c.createdAt })),
       trialDays: TRIAL_DAYS,
       plans: PLANS.filter((p) => p.orgType === state.orgType),
     });
@@ -339,6 +348,57 @@ billingRouter.get('/verify', requireAuth, async (req: AuthRequest, res: Response
   }
 });
 
+// Customer says "I paid by Mobile Money". Nothing is unlocked until an admin confirms the money arrived.
+const claimSchema = z.object({
+  planId: z.string().min(1).max(60),
+  momoRef: z.string().trim().min(4).max(40).regex(/^[A-Za-z0-9 _-]+$/, 'Use only letters and numbers for the Mobile Money transaction ID'),
+});
+const claimLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 5, name: 'momo-claim-limiter' });
+
+billingRouter.post('/momo-claim', requireAuth, claimLimiter, async (req: AuthRequest, res: Response) => {
+  try {
+    const orgId = req.user!.organizationId;
+    if (!orgId) return res.status(400).json({ error: 'Organization membership required' });
+    const parsed = claimSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid request' });
+
+    const plan = PLANS.find((p) => p.id === parsed.data.planId);
+    const type = await orgTypeOf(orgId);
+    if (!plan || plan.orgType !== type) return res.status(400).json({ error: 'That plan is not available for your account' });
+
+    const momoRef = parsed.data.momoRef.toUpperCase();
+    const dup = await db.select({ id: payments.id }).from(payments)
+      .where(and(eq(payments.provider, 'momo_manual'), eq(payments.note, momoRef))).limit(1);
+    if (dup.length) return res.status(409).json({ error: 'That transaction ID has already been submitted.' });
+
+    const open = await db.select({ n: sql<number>`count(*)::int` }).from(payments)
+      .where(and(eq(payments.organizationId, orgId), eq(payments.provider, 'momo_manual'), eq(payments.status, 'pending')));
+    if ((open[0]?.n || 0) >= 3) return res.status(429).json({ error: 'You already have payments waiting to be confirmed. Please wait for them first.' });
+
+    await db.insert(payments).values({
+      id: 'pay_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16),
+      organizationId: orgId,
+      userId: req.user!.uid,
+      plan: plan.id,
+      provider: 'momo_manual',
+      reference: 'mom_' + crypto.randomBytes(10).toString('hex'),
+      amountPesewas: plan.priceGhs * 100,
+      currency: 'GHS',
+      status: 'pending',
+      periodDays: plan.days,
+      note: momoRef,
+    });
+    await logAuditEvent({
+      actorUserId: req.user!.uid, organizationId: orgId, action: 'billing.momo_claim', resourceType: 'organization',
+      resourceId: orgId, metadata: { plan: plan.id, momoRef }, ipAddress: req.ip || null, userAgent: req.get('user-agent') || null,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('MoMo claim error:', err);
+    res.status(500).json({ error: 'Could not submit your payment. Please try again.' });
+  }
+});
+
 // ---------------- Admin ----------------
 
 billingRouter.get('/admin/overview', requireAuth, requireAdmin, async (_req: AuthRequest, res: Response) => {
@@ -359,6 +419,12 @@ billingRouter.get('/admin/overview', requireAuth, requireAdmin, async (_req: Aut
       .leftJoin(subscriptions, eq(subscriptions.organizationId, organizations.id))
       .where(sql`${organizations.type} IN ('contractor','supplier') AND ${organizations.deletedAt} IS NULL`);
 
+    const claimRows = await db.select({ payment: payments, orgName: organizations.name })
+      .from(payments)
+      .innerJoin(organizations, eq(payments.organizationId, organizations.id))
+      .where(and(eq(payments.provider, 'momo_manual'), eq(payments.status, 'pending')))
+      .orderBy(desc(payments.createdAt)).limit(100);
+
     const now = Date.now();
     const accounts = orgs.map((o) => {
       const trialEnd = o.createdAt.getTime() + TRIAL_DAYS * DAY_MS;
@@ -372,6 +438,16 @@ billingRouter.get('/admin/overview', requireAuth, requireAdmin, async (_req: Aut
       enforced: isEnforced(),
       paymentsEnabled: !!paystackKey(),
       trialDays: TRIAL_DAYS,
+      momoNumber: MOMO_NUMBER,
+      claims: claimRows.map((c) => ({
+        id: c.payment.id,
+        organizationId: c.payment.organizationId,
+        organization: c.orgName,
+        plan: c.payment.plan,
+        amountGhs: c.payment.amountPesewas / 100,
+        momoRef: c.payment.note,
+        createdAt: c.payment.createdAt,
+      })),
       totals: {
         revenueGhs: totalPesewas / 100,
         active: accounts.filter((a) => a.status === 'active').length,
@@ -395,6 +471,40 @@ billingRouter.get('/admin/overview', requireAuth, requireAdmin, async (_req: Aut
   } catch (err) {
     console.error('Admin billing error:', err);
     res.status(500).json({ error: 'Could not load billing overview' });
+  }
+});
+
+
+// Confirm (money arrived on the MoMo number) or reject a customer's claim.
+billingRouter.post('/admin/claims/:id/:action', requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const action = req.params.action;
+    if (action !== 'confirm' && action !== 'reject') return res.status(400).json({ error: 'Invalid action' });
+
+    const done = await db.transaction(async (dbx) => {
+      const row = (await dbx.select().from(payments).where(eq(payments.id, req.params.id)).limit(1).for('update'))[0];
+      if (!row || row.provider !== 'momo_manual' || row.status !== 'pending') return null;
+      if (action === 'reject') {
+        await dbx.update(payments).set({ status: 'failed' }).where(eq(payments.id, row.id));
+        return row;
+      }
+      const r = await dbx.execute(sql`SELECT nextval('invoice_number_seq') AS n`);
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(parseInt(String(r.rows[0]?.n), 10)).padStart(5, '0')}`;
+      await dbx.update(payments).set({ status: 'success', paidAt: new Date(), invoiceNumber }).where(eq(payments.id, row.id));
+      await extendSubscription(dbx, row.organizationId, row.plan, row.periodDays);
+      return row;
+    });
+    if (!done) return res.status(404).json({ error: 'Claim not found or already handled' });
+
+    await logAuditEvent({
+      actorUserId: req.user!.uid, organizationId: done.organizationId, action: `billing.momo_${action}`,
+      resourceType: 'payment', resourceId: done.id, metadata: { momoRef: done.note, plan: done.plan },
+      ipAddress: req.ip || null, userAgent: req.get('user-agent') || null,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Claim action error:', err);
+    res.status(500).json({ error: 'Could not update that payment' });
   }
 });
 

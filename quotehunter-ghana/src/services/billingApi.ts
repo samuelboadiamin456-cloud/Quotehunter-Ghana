@@ -17,6 +17,8 @@ export interface BillingStatusInfo {
   daysLeft: number;
   plan: string | null;
   paymentsEnabled: boolean;
+  momo: { number: string; name: string };
+  pendingClaims: Array<{ id: string; plan: string; momoRef: string | null; createdAt: string }>;
   trialDays: number;
   plans: BillingPlan[];
 }
@@ -49,6 +51,8 @@ export interface AdminBillingOverview {
   enforced: boolean;
   paymentsEnabled: boolean;
   trialDays: number;
+  momoNumber: string;
+  claims: Array<{ id: string; organizationId: string; organization: string; plan: string; amountGhs: number; momoRef: string | null; createdAt: string }>;
   totals: { revenueGhs: number; active: number; trialing: number; expired: number };
   payments: Array<{
     id: string;
@@ -93,6 +97,10 @@ export const billingApi = {
   invoice: (id: string) => call<{ invoice: InvoiceData }>(`/invoices/${encodeURIComponent(id)}`),
   checkout: (planId: string) => call<{ authorizationUrl: string }>('/checkout', { method: 'POST', body: JSON.stringify({ planId }) }),
   verify: (reference: string) => call<{ status: string }>(`/verify?reference=${encodeURIComponent(reference)}`),
+  momoClaim: (planId: string, momoRef: string) =>
+    call<{ success: boolean }>('/momo-claim', { method: 'POST', body: JSON.stringify({ planId, momoRef }) }),
+  adminClaim: (id: string, action: 'confirm' | 'reject') =>
+    call<{ success: boolean }>(`/admin/claims/${encodeURIComponent(id)}/${action}`, { method: 'POST' }),
   adminOverview: () => call<AdminBillingOverview>('/admin/overview'),
   adminGrant: (body: { organizationId: string; days: number; amountGhs?: number; note: string }) =>
     call<{ success: boolean }>('/admin/grant', { method: 'POST', body: JSON.stringify(body) }),
