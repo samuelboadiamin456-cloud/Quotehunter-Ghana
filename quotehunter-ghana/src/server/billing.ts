@@ -315,12 +315,13 @@ billingRouter.post('/checkout', requireAuth, checkoutLimiter, async (req: AuthRe
         amount: amountPesewas,
         currency: 'GHS',
         reference,
+        channels: ['mobile_money', 'card'],
         callback_url: `${base}/?billing=return`,
         metadata: { organizationId: orgId, plan: plan.id },
       }),
     });
 
-    res.json({ authorizationUrl: init.authorization_url, reference });
+    res.json({ authorizationUrl: init.authorization_url, accessCode: init.access_code, reference });
   } catch (err: any) {
     console.error('Checkout error:', err);
     res.status(502).json({ error: 'Could not start the payment. Please try again.' });

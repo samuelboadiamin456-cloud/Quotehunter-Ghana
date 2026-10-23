@@ -95,7 +95,7 @@ export const billingApi = {
   status: () => call<BillingStatusInfo>('/status'),
   payments: () => call<{ payments: PaymentRow[] }>('/payments'),
   invoice: (id: string) => call<{ invoice: InvoiceData }>(`/invoices/${encodeURIComponent(id)}`),
-  checkout: (planId: string) => call<{ authorizationUrl: string }>('/checkout', { method: 'POST', body: JSON.stringify({ planId }) }),
+  checkout: (planId: string) => call<{ authorizationUrl: string; accessCode: string; reference: string }>('/checkout', { method: 'POST', body: JSON.stringify({ planId }) }),
   verify: (reference: string) => call<{ status: string }>(`/verify?reference=${encodeURIComponent(reference)}`),
   momoClaim: (planId: string, momoRef: string) =>
     call<{ success: boolean }>('/momo-claim', { method: 'POST', body: JSON.stringify({ planId, momoRef }) }),

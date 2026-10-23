@@ -47,12 +47,55 @@ export const BillingView: React.FC = () => {
     }
   }, []);
 
+  // Opens Paystack's pay-in-place window: the customer picks Mobile Money or card, approves the charge
+  // on their phone (or enters their card), and we confirm it with Paystack before switching the plan on.
+  const loadPaystack = () =>
+    new Promise<any>((resolve, reject) => {
+      const w = window as any;
+      if (w.PaystackPop) return resolve(w.PaystackPop);
+      const existing = document.getElementById('paystack-inline') as HTMLScriptElement | null;
+      const done = () => (w.PaystackPop ? resolve(w.PaystackPop) : reject(new Error('Could not load the payment window')));
+      if (existing) {
+        existing.addEventListener('load', done);
+        existing.addEventListener('error', () => reject(new Error('Could not load the payment window')));
+        return;
+      }
+      const tag = document.createElement('script');
+      tag.id = 'paystack-inline';
+      tag.src = 'https://js.paystack.co/v2/inline.js';
+      tag.onload = done;
+      tag.onerror = () => reject(new Error('Could not load the payment window. Check your internet connection.'));
+      document.head.appendChild(tag);
+    });
+
   const pay = async (planId: string) => {
     setError(null);
+    setNotice(null);
     setBusyPlan(planId);
     try {
-      const { authorizationUrl } = await billingApi.checkout(planId);
-      window.location.href = authorizationUrl;
+      const [PaystackPop, { accessCode, reference }] = await Promise.all([loadPaystack(), billingApi.checkout(planId)]);
+      const popup = new PaystackPop();
+      popup.resumeTransaction(accessCode, {
+        onSuccess: async () => {
+          setNotice('Confirming your payment...');
+          try {
+            const r = await billingApi.verify(reference);
+            setNotice(r.status === 'success' ? 'Payment received. Thank you, your plan is active.' : 'We have not received that payment yet. If you were charged, it will show here shortly.');
+          } catch (e: any) {
+            setNotice(e.message);
+          }
+          setBusyPlan(null);
+          load();
+        },
+        onCancel: () => {
+          setNotice('Payment cancelled. You have not been charged.');
+          setBusyPlan(null);
+        },
+        onError: (err: any) => {
+          setError(err?.message || 'The payment could not be completed');
+          setBusyPlan(null);
+        },
+      });
     } catch (e: any) {
       setError(e.message || 'Could not start the payment');
       setBusyPlan(null);
@@ -121,7 +164,7 @@ export const BillingView: React.FC = () => {
 
           <div className="grid gap-4 sm:grid-cols-2">
             {status.plans.map((p) => {
-              const selected = (momoPlan || status.plans[0]?.id) === p.id;
+              const selected = !status.paymentsEnabled && (momoPlan || status.plans[0]?.id) === p.id;
               return (
                 <div key={p.id} className={`bg-white border rounded-lg p-5 flex flex-col gap-3 ${selected ? 'border-amber-500 ring-1 ring-amber-500' : 'border-slate-200'}`}>
                   <div className="text-sm font-medium text-slate-500">{p.interval === 'monthly' ? 'Monthly' : 'Yearly'}</div>
@@ -133,19 +176,20 @@ export const BillingView: React.FC = () => {
                     <div className="text-sm text-slate-500">Works out at {cedis(Math.round(p.priceGhs / 12))} a month.</div>
                   )}
                   <div className="mt-auto flex flex-col gap-2">
-                    <button
-                      onClick={() => setMomoPlan(p.id)}
-                      className={`whitespace-nowrap px-4 py-2.5 font-semibold text-sm rounded-md ${selected ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-800 hover:bg-slate-200'}`}
-                    >
-                      {selected ? 'Selected' : 'Choose this plan'}
-                    </button>
-                    {status.paymentsEnabled && (
+                    {status.paymentsEnabled ? (
                       <button
                         onClick={() => pay(p.id)}
                         disabled={busyPlan !== null}
-                        className="whitespace-nowrap px-4 py-2.5 border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-800 font-semibold text-sm rounded-md"
+                        className="whitespace-nowrap px-4 py-3 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold text-sm rounded-md"
                       >
-                        {busyPlan === p.id ? 'Opening Paystack...' : 'Pay online with card or MoMo'}
+                        {busyPlan === p.id ? 'Opening payment...' : `Pay ${cedis(p.priceGhs)} now`}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setMomoPlan(p.id)}
+                        className={`whitespace-nowrap px-4 py-2.5 font-semibold text-sm rounded-md ${selected ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-800 hover:bg-slate-200'}`}
+                      >
+                        {selected ? 'Selected' : 'Choose this plan'}
                       </button>
                     )}
                   </div>
@@ -157,8 +201,10 @@ export const BillingView: React.FC = () => {
           {(() => {
             const chosen = status.plans.find((p) => p.id === (momoPlan || status.plans[0]?.id));
             return (
-              <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-                <div className="font-semibold text-slate-900">Pay by Mobile Money</div>
+              <details open={!status.paymentsEnabled} className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+                <summary className="font-semibold text-slate-900 cursor-pointer">
+                  {status.paymentsEnabled ? "Can't pay online? Pay Mobile Money by hand" : 'Pay by Mobile Money'}
+                </summary>
                 <ol className="list-decimal pl-5 space-y-1.5 text-sm text-slate-700">
                   <li>
                     Send <strong>{chosen ? cedis(chosen.priceGhs) : 'the plan amount'}</strong> to{' '}
@@ -188,9 +234,14 @@ export const BillingView: React.FC = () => {
                     {status.pendingClaims.map((c) => c.momoRef).join(', ')}
                   </div>
                 )}
-              </div>
+              </details>
             );
           })()}
+          {status.paymentsEnabled && (
+            <p className="text-xs text-slate-500">
+              Tap Pay, choose Mobile Money or card, and approve the payment on your phone. Payments are handled by Paystack. We never see your card details or Mobile Money PIN.
+            </p>
+          )}
         </>
       )}
 
